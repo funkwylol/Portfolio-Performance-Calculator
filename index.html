@@ -81,26 +81,14 @@
         </div>
         <div class="input-group">
             <label for="winProbability">Win Probability (%):</label>
-            <input type="range" id="winProbability" min="50" max="99" value="70">
-            <input type="number" id="winProbabilityValue" value="70" min="50" max="99">
-        </div>
-        <div class="input-group">
-            <label for="tradingStyle">Trading Style:</label>
-            <select id="tradingStyle">
-                <option value="day">Day Trading</option>
-                <option value="swing">Swing Trading</option>
-                <option value="position">Position Trading</option>
-            </select>
+            <input type="range" id="winProbability" min="1" max="99" value="70">
+            <input type="number" id="winProbabilityValue" value="70" min="1" max="99">
+            <small style="display: block; color: #666;">Note: Win rates below 50% typically result in portfolio decline</small>
         </div>
         <div class="input-group">
             <label for="tradesPerPeriod">Trades per Day:</label>
             <input type="number" id="tradesPerPeriod" value="5" min="1" max="50">
             <small style="display: block; color: #666;">Average number of trades you make per day</small>
-        </div>
-        <div class="input-group">
-            <label for="tradingDays">Trading Days per Year:</label>
-            <input type="number" id="tradingDays" value="252" min="1" max="365">
-            <small style="display: block; color: #666;">Standard market year has 252 trading days</small>
         </div>
         <div class="input-group">
             <label for="simulations">Number of Simulations:</label>
@@ -110,21 +98,29 @@
         <button onclick="runSimulation()">Calculate</button>
         <div class="result">
             <h3>Results:</h3>
-            <p>Average Final Portfolio Value: <span id="averageResult">-</span></p>
-            <p>Best Case: <span id="bestCase">-</span></p>
-            <p>Worst Case: <span id="worstCase">-</span></p>
+            <p>Average Portfolio Increase: $<span id="averageResult">-</span></p>
+            <p>Best Case: $<span id="bestCase">-</span></p>
+            <p>Worst Case: $<span id="worstCase">-</span></p>
         </div>
         <div id="chart"></div>
         <div class="comparison-section">
             <h3>Comparison with S&P 500</h3>
-            <div class="result">
-                <p>Your Strategy:</p>
-                <p>Annual Return: <span id="strategyReturn">-</span></p>
-                <p>Average Daily Return: <span id="avgDailyReturn">-</span></p>
-                <p>Daily Standard Deviation: <span id="stdDev">-</span></p>
-                <p>Total Trades Per Year: <span id="totalTrades">-</span></p>
-                
-                <hr style="margin: 20px 0;">
+        <div class="result">
+            <p>Daily Performance:</p>
+            <p>Average Portfolio Increase per Day: <span id="avgDailyReturn">-</span></p>
+            <p>Daily Volatility: <span id="stdDev">-</span></p>
+            <p>Trades per Day: <span id="tradesPerDay">-</span></p>
+            
+            <hr style="margin: 20px 0;">
+            
+            <p>Annual Projection:</p>
+            <div class="input-group" style="margin-top: 10px;">
+                <label for="tradingDays">Trading Days per Year:</label>
+                <input type="number" id="tradingDays" value="252" min="1" max="365">
+                <small style="display: block; color: #666;">Standard market year has 252 trading days</small>
+            </div>
+            <p>Estimated Annual Portfolio Increase: <span id="strategyReturn">-</span></p>
+            <p>Total Trades Per Year: <span id="totalTrades">-</span></p>                <hr style="margin: 20px 0;">
                 
                 <p>S&P 500 Historical Average Returns:</p>
                 <table style="width: 100%; margin-top: 10px; border-collapse: collapse;">
@@ -187,7 +183,6 @@
             const tradingDaysPerYear = parseInt(document.getElementById('tradingDays').value);
             const numSimulations = parseInt(document.getElementById('simulations').value);
             const winProbability = parseFloat(document.getElementById('winProbabilityValue').value) / 100;
-            const tradingStyle = document.getElementById('tradingStyle').value;
 
             // Calculate total trades per year
             const totalTradesPerYear = tradesPerDay * tradingDaysPerYear;
@@ -196,34 +191,25 @@
             let dailyResults = [];
             let allPaths = [];
 
-            // Run multiple simulations for a full year
+            // Run multiple simulations of single trading days
             for (let sim = 0; sim < numSimulations; sim++) {
                 let portfolio = initialPortfolio;
-                let path = [portfolio];
-                let dailyPath = [];
+                let dailyReturn = 0;
                 
-                // Simulate each trading day
-                for (let day = 0; day < tradingDaysPerYear; day++) {
-                    let startOfDayPortfolio = portfolio;
-                    
-                    // Simulate trades for this day
-                    for (let trade = 0; trade < tradesPerDay; trade++) {
-                        const randomValue = Math.random();
-                        if (randomValue < winProbability) {  // User-defined chance of success
-                            portfolio += (portfolio * (riskRewardRatio * risk));
-                        } else {
-                            portfolio -= (portfolio * risk);
-                        }
+                // Simulate trades for one day
+                for (let trade = 0; trade < tradesPerDay; trade++) {
+                    const randomValue = Math.random();
+                    if (randomValue < winProbability) {  // User-defined chance of success
+                        portfolio += (portfolio * (riskRewardRatio * risk));
+                    } else {
+                        portfolio -= (portfolio * risk);
                     }
-                    
-                    // Record daily result
-                    dailyPath.push(((portfolio - startOfDayPortfolio) / startOfDayPortfolio) * 100);
-                    path.push(portfolio);
                 }
                 
-                allResults.push(portfolio);
-                allPaths.push(path);
-                dailyResults.push(dailyPath);
+                // Calculate daily return percentage
+                dailyReturn = ((portfolio - initialPortfolio) / initialPortfolio) * 100;
+                dailyResults.push(dailyReturn);
+                allResults.push(dailyReturn);
             }
 
             // Calculate statistics
@@ -231,16 +217,15 @@
             const best = Math.max(...allResults);
             const worst = Math.min(...allResults);
 
-            // Calculate returns
-            const totalReturn = ((average - initialPortfolio) / initialPortfolio) * 100;
-            const annualizedReturn = totalReturn; // This is already annual since we simulated a full year
-
             // Calculate average daily return and standard deviation
-            const allDailyReturns = dailyResults.flat();
-            const avgDailyReturn = allDailyReturns.reduce((a, b) => a + b, 0) / allDailyReturns.length;
+            const avgDailyReturn = allResults.reduce((a, b) => a + b, 0) / allResults.length;
             const stdDev = Math.sqrt(
-                allDailyReturns.reduce((sq, n) => sq + Math.pow(n - avgDailyReturn, 2), 0) / (allDailyReturns.length - 1)
+                allResults.reduce((sq, n) => sq + Math.pow(n - avgDailyReturn, 2), 0) / (allResults.length - 1)
             );
+
+            // Calculate estimated annual return using compound interest formula
+            // (1 + daily_return)^number_of_trading_days - 1
+            const estimatedAnnualReturn = (Math.pow(1 + (avgDailyReturn / 100), tradingDaysPerYear) - 1) * 100;
 
             // Update results
             document.getElementById('averageResult').textContent = average.toFixed(2);
@@ -248,10 +233,11 @@
             document.getElementById('worstCase').textContent = worst.toFixed(2);
             
             // Update strategy returns
-            document.getElementById('strategyReturn').textContent = annualizedReturn.toFixed(2) + '%';
+            document.getElementById('strategyReturn').textContent = estimatedAnnualReturn.toFixed(2) + '%';
             document.getElementById('avgDailyReturn').textContent = avgDailyReturn.toFixed(2) + '%';
             document.getElementById('stdDev').textContent = stdDev.toFixed(2) + '%';
             document.getElementById('totalTrades').textContent = totalTradesPerYear;
+            document.getElementById('tradesPerDay').textContent = tradesPerDay;
 
             // Compare with S&P 500
             const sp500Returns = {
@@ -271,34 +257,26 @@
                 `${(annualizedReturn - sp500Returns['historical']).toFixed(2)}% ${annualizedReturn > sp500Returns['historical'] ? '📈' : '📉'}`;
 
             // Create plot
-            const traces = allPaths.map((path, i) => ({
-                y: path,
-                type: 'scatter',
-                mode: 'lines',
-                opacity: 0.1,
-                line: { color: 'blue' },
-                showlegend: false
-            }));
+            // Create histogram of daily returns
+            const trace = {
+                x: allResults,
+                type: 'histogram',
+                nbinsx: 30,
+                name: 'Daily Returns Distribution',
+                opacity: 0.7,
+                marker: {
+                    color: 'blue'
+                }
+            };
 
-            // Add average line
-            const avgPath = Array(iterations + 1).fill(0);
-            for (let i = 0; i <= iterations; i++) {
-                avgPath[i] = allPaths.reduce((sum, path) => sum + path[i], 0) / allPaths.length;
-            }
-
-            traces.push({
-                y: avgPath,
-                type: 'scatter',
-                mode: 'lines',
-                line: { color: 'red', width: 2 },
-                name: 'Average'
-            });
+            const traces = [trace];
 
             const layout = {
-                title: 'Portfolio Value Over Time',
-                yaxis: { title: 'Portfolio Value' },
-                xaxis: { title: 'Iteration' },
-                showlegend: true
+                title: 'Distribution of Daily Returns',
+                yaxis: { title: 'Frequency' },
+                xaxis: { title: 'Daily Return (%)' },
+                showlegend: true,
+                bargap: 0.05
             };
 
             Plotly.newPlot('chart', traces, layout);
