@@ -236,7 +236,7 @@
 
             // Calculate estimated annual return using compound interest formula
             // (1 + daily_return)^number_of_trading_days - 1
-            const estimatedAnnualReturn = (Math.pow(1 + (avgDailyReturn / 100), tradingDaysPerYear) - 1) * 100;
+            const estimatedAnnualReturn = (Math.pow(1 + (avgDailyReturn / 100), tradingDaysPerYear) - 1);
 
             // Update results
             document.getElementById('averageResult').textContent = average.toFixed(2);
